@@ -1,0 +1,27 @@
+{
+  "name": "@tiagoantao/dat_short",
+  "version": "0.0.1-SNAPSHOT",
+  "description": "A URL Shortener for DAT/Beaker",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiagoantao/dat_short.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tiagoantao/dat_short/issues",
+    "email": "tiagoantao@gmail.com"
+  },
+  "homepage": "https://github.com/tiagoantao/dat_short",
+  "keywords": [
+    "beaker",
+    "dat"
+  ],
+  "author": {
+    "name": "Tiago Antao",
+    "email": "tiago@tiago.org",
+    "url": "http://tiago.org"
+  },
+  "dependencies": {
+    "bdb": "0.0.2"
+  }
+}
