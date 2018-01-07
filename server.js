@@ -24,6 +24,7 @@ const create_base_db = (db) => {
 
 }
 
+
 var max_id // A lovely global variable :(
 
 const get_max_id = (db) => {
@@ -35,14 +36,13 @@ const get_max_id = (db) => {
     return max_id
 }
 
+
 const prepare_database = (fname) => {
     const db = new sql.Database(fname)
     create_base_db(db)
     max_id = get_max_id(db)
     return db
 }
-
-const db = prepare_database('my.db')
 
 const create_shortener = (req, res) => {
     const template = fs.readFileSync('template.html')
@@ -58,6 +58,8 @@ const redirect = (req, res) => {
     res.writeHead(302, {'Location': 'dat://3434e9e7e4d206d8dfbdfbb386deddb2fc667ef4f158d4dfefecf4ff9a4e771d/'})
 }
 
+
+const db = prepare_database('my.db')
 
 process.on('SIGINT', (code) => {
     console.log(123)
