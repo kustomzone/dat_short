@@ -44,6 +44,7 @@ const prepare_database = (fname) => {
     return db
 }
 
+
 const create_shortener = (req, res) => {
     const template = fs.readFileSync('template.html')
     res.writeHead(200, {'Content-Type': 'text/html'})
@@ -53,28 +54,35 @@ const create_shortener = (req, res) => {
 }
 
 
+const check_short_url = (url) => {
+    return true
+}
+
+
+const is_beaker = (user_agent) => user_agent.indexOf("Beaker") > -1
+
+
 const redirect = (req, res) => {
-    console.log(req.headers['user-agent'])
-    res.writeHead(302, {'Location': 'dat://3434e9e7e4d206d8dfbdfbb386deddb2fc667ef4f158d4dfefecf4ff9a4e771d/'})
+    const short_url = check_short_url(req.url)
+    if (!short_url) {
+	//XXX report error
+	return
+    }
+    const redirect_url = is_beaker(req.headers['user-agent']) ?
+	  short_url.dat : short_url.https
+    res.writeHead(302, {'Location': redirect_url})
 }
 
 
 const db = prepare_database('my.db')
 
 process.on('SIGINT', (code) => {
-    console.log(123)
     db.close()
     process.exit()
 })
 
 http.createServer((req, res) => {
-
-    if (req.url === '/') {
-        create_shortener(req, res)
-    }
-    else {
-        redirect(req, res)
-    }
-
+    req.url === '/' ?
+	create_shortener(req, res) : redirect(req, res)
     res.end()
 }).listen(8080)
