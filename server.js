@@ -25,10 +25,13 @@ const create_base_db = (db) => {
 }
 
 
-const get_max_id = (db, cb) => {
+const get_max_id_url = (db, cb) => {
     db.each('SELECT MAX(id) AS max FROM links', (err, row) => {
-        cb(db, row.max)
-    })
+        const my_max = row.max
+        db.each('SELECT url FROM links WHERE id=' + my_max.toString(),
+                (err, row) => {
+                    cb(db, my_max, row.URL)
+                })})
 }
 
 
@@ -36,7 +39,7 @@ const prepare_database = (fname, cb) => {
     const db = new sql.Database(fname)
     db.serialize(() => {
         create_base_db(db)
-        get_max_id(db, cb)
+        cb(db)
     })
 }
 
@@ -57,7 +60,9 @@ const ask_shortener = (req, res) => {
 
 const report_form_error = (res, error_text) => {
     res.write(get_template('error-form.html', error_text))
+    res.end()
 }
+
 
 const has_form_errors = (res, err, fields) => {
     if (fields.dat === undefined || fields.dat === '') {
@@ -68,9 +73,8 @@ const has_form_errors = (res, err, fields) => {
         report_form_error(res, 'Dat url must start with dat://')
         return true
     }
-    console.log(fields.https, fields.https != '', fields)
-    if ((fields.https != undefined || fields.https != '')
-        || !fields.https.startsWith('https://')) {
+    if (!((fields.https === undefined || fields.https === '')
+          || fields.https.startsWith('https://'))) {
         report_form_error(res, 'HTTPS url must start with https://')
         return true
     }
@@ -78,38 +82,61 @@ const has_form_errors = (res, err, fields) => {
 }
 
 
-const write_database = (db, res, fields) => {
-    res.write('Will write ' + fields)
-    return true
+const create_new_url = (old_url) => {
+    if (old_url[0] === '/') return  '/' + create_new_url(old_url.substring(1))
+    if (old_url === 'z'.repeat(old_url.length)) {
+        return 'a'.repeat(old_url.length + 1)
+    }
+        //122 = z
+
+    const first =  old_url.charCodeAt(0)
+    const rest = old_url.substring(1)
+    return first === 122 ?
+        'z' + create_new_url(rest) :
+        String.fromCharCode(first + 1) + rest
 }
 
 
-const commit_shortener = (db, req, res, change_max) => {
-    const form = new formd.IncomingForm()
-    form.parse(req, (err, fields, files) => {
-        has_form_errors(res, err, fields) || write_database (db, res, fields)
+const write_database = (db, res, fields) => {
+    get_max_id_url(db, (db, max_id, url) => {
+        res.write('Will write')
+        res.write(fields.dat)
+        res.write(fields.https)
+        res.write(max_id.toString())
+        res.write(url)
+        insert_db_url.run(max_id + 1, create_new_url(url),
+			  fields.dat, fields.https)
         res.end()
     })
 }
 
 
-const create_shortener = (db, req, res, change_max) => {
+const commit_shortener = (db, req, res) => {
+    const form = new formd.IncomingForm()
+    form.parse(req, (err, fields, files) => {
+        has_form_errors(res, err, fields) ||
+            write_database (db, res, fields)
+    })
+}
+
+
+const create_shortener = (db, req, res) => {
     res.writeHead(200, {'Content-Type': 'text/html'})
     req.method === 'POST' ?
-        commit_shortener(db, req, res, change_max) :
+        commit_shortener(db, req, res) :
         ask_shortener (req, res)
 }
 
 
-const check_short_url = (check_stmt, url, cb) => {
-    check_stmt.get(url, (err, obj) => cb(err, obj))
+const check_short_url = (url, cb) => {
+    check_db_short.get(url, (err, obj) => cb(err, obj))
 }
 
 
 const is_beaker = (user_agent) => user_agent.indexOf("Beaker") > -1
 
 
-const redirect = (check_stmt, req, res) => {
+const redirect = (req, res) => {
     if (req.url === '/favicon.ico') return
 
     const process_url = (err, short_url) => {
@@ -126,25 +153,28 @@ const redirect = (check_stmt, req, res) => {
         res.end()
     }
     
-    check_short_url(check_stmt, req.url, process_url)
+    check_short_url(req.url, process_url)
 }
 
 
-const run_server = (db, max_id) => {
-    const check_stmt = db.prepare('SELECT * from links where url=?')
+var check_db_short
+var insert_db_url
+
+const run_server = (db) => {
+    check_db_short = db.prepare('SELECT * from links where url=?')
+    insert_db_url = db.prepare(`INSERT INTO links (id, URL, dat, https)
+                                     VALUES (?, ?, ?, ?)`)
 
     process.on('SIGINT', (code) => {
-        check_stmt.finalize()
+        check_db_short.finalize()
         db.close()
         process.exit()
     })
 
     http.createServer((req, res) => {
-        const current_max = max_id
-        const change_max = (new_max) => {current_max = new_max}
         req.url === '/' ?
-            create_shortener(db, req, res, change_max) :
-            redirect(check_stmt, req, res)
+            create_shortener(db, req, res) :
+            redirect(req, res)
     }).listen(8080)
 
 }
