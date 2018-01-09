@@ -40,8 +40,15 @@ const prepare_database = (fname, cb) => {
 }
 
 
+const get_template = (base_name) => {
+    if (fs.existsSync("config-" + base_name)) {
+	return fs.readFileSync("config-" + base_name)
+    }
+    return fs.readFileSync(base_name)
+}
+
 const create_shortener = (req, res) => {
-    const template = fs.readFileSync('template.html')
+    const template = get_template('template.html')
     res.writeHead(200, {'Content-Type': 'text/html'})
     res.end(template)
     console.log(req.method === 'POST')
