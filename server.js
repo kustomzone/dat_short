@@ -1,13 +1,14 @@
 const fs = require('fs')
 const http = require('http')
 
+const formd = require('formidable')
 const sql = require('sqlite3')
 
 
 const create_base_db = (db) => {
     db.serialize(() => {
         db.run(`
-	       CREATE TABLE links (
+               CREATE TABLE links (
                    id INTEGER UNIQUE,
                   URL TEXT UNIQUE,
                   dat TEXT NOT NULL,
@@ -25,8 +26,8 @@ const create_base_db = (db) => {
 
 
 const get_max_id = (db, cb) => {
-    db.each("SELECT MAX(id) AS max FROM links", (err, row) => {
-	cb(db, row.max)
+    db.each('SELECT MAX(id) AS max FROM links', (err, row) => {
+        cb(db, row.max)
     })
 }
 
@@ -34,37 +35,69 @@ const get_max_id = (db, cb) => {
 const prepare_database = (fname, cb) => {
     const db = new sql.Database(fname)
     db.serialize(() => {
-	create_base_db(db)
-	get_max_id(db, cb)
+        create_base_db(db)
+        get_max_id(db, cb)
     })
 }
 
 
-const get_template = (base_name) => {
-    if (fs.existsSync("config-" + base_name)) {
-	return fs.readFileSync("config-" + base_name)
-    }
-    return fs.readFileSync(base_name)
+const get_template = (base_name, replace1='', replace2='') => {
+    const text = fs.existsSync('config-' + base_name) ?
+          fs.readFileSync('config-' + base_name, 'utf8') :
+          fs.readFileSync(base_name, 'utf8')
+    return text.replace('REPLACE1', replace1).replace('REPLACE2', replace2)
 }
 
 
 const ask_shortener = (req, res) => {
     const template = get_template('template.html')
-    res.writeHead(200, {'Content-Type': 'text/html'})
     res.end(template)
 }
 
 
-const commit_shortener = (req, res, change_max) => {
-    console.log(req)
-    res.end()
+const report_form_error = (res, error_text) => {
+    res.write(get_template('error-form.html', error_text))
+}
+
+const has_form_errors = (res, err, fields) => {
+    if (fields.dat === undefined || fields.dat === '') {
+        report_form_error(res, 'No dat specified')
+        return true
+    }
+    if (!fields.dat.startsWith('dat://')) {
+        report_form_error(res, 'Dat url must start with dat://')
+        return true
+    }
+    console.log(fields.https, fields.https != '', fields)
+    if ((fields.https != undefined || fields.https != '')
+        || !fields.https.startsWith('https://')) {
+        report_form_error(res, 'HTTPS url must start with https://')
+        return true
+    }
+    return false
 }
 
 
-const create_shortener = (req, res, change_max) => {
+const write_database = (db, res, fields) => {
+    res.write('Will write ' + fields)
+    return true
+}
+
+
+const commit_shortener = (db, req, res, change_max) => {
+    const form = new formd.IncomingForm()
+    form.parse(req, (err, fields, files) => {
+        has_form_errors(res, err, fields) || write_database (db, res, fields)
+        res.end()
+    })
+}
+
+
+const create_shortener = (db, req, res, change_max) => {
+    res.writeHead(200, {'Content-Type': 'text/html'})
     req.method === 'POST' ?
-	commit_shortener(req, res, change_max) :
-	ask_shortener (req, res)
+        commit_shortener(db, req, res, change_max) :
+        ask_shortener (req, res)
 }
 
 
@@ -85,7 +118,7 @@ const redirect = (check_stmt, req, res) => {
             res.writeHead(200, {'Content-Type': 'text/html'})
             res.end(template)
         }
-	else {
+        else {
             const redirect_url = is_beaker(req.headers['user-agent']) ?
                   short_url.dat : short_url.https
             res.writeHead(302, {'Location': redirect_url})
@@ -107,11 +140,11 @@ const run_server = (db, max_id) => {
     })
 
     http.createServer((req, res) => {
-	const current_max = max_id
-	const change_max = (new_max) => {current_max = new_max}
+        const current_max = max_id
+        const change_max = (new_max) => {current_max = new_max}
         req.url === '/' ?
-            create_shortener(req, res, change_max) :
-	    redirect(check_stmt, req, res)
+            create_shortener(db, req, res, change_max) :
+            redirect(check_stmt, req, res)
     }).listen(8080)
 
 }
