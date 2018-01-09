@@ -58,7 +58,6 @@ const create_shortener = (req, res) => {
 const check_short_url = (check_stmt, url, cb) => {
     console.log(1234, url)
     check_stmt.get(url, (err, obj) => cb(err, obj))
-    return true
 }
 
 
@@ -70,8 +69,9 @@ const redirect = (check_stmt, req, res) => {
 
     const process_url = (err, short_url) => {
         if (!short_url) {
-	    console.log(1111111)
-	    //XXX report error
+            const template = get_template('error.html')
+            res.writeHead(200, {'Content-Type': 'text/html'})
+            res.end(template)
         }
 	else {
             const redirect_url = is_beaker(req.headers['user-agent']) ?
@@ -81,7 +81,7 @@ const redirect = (check_stmt, req, res) => {
         res.end()
     }
     
-    const short_url = check_short_url(check_stmt, req.url, process_url)
+    check_short_url(check_stmt, req.url, process_url)
 }
 
 
