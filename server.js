@@ -47,16 +47,28 @@ const get_template = (base_name) => {
     return fs.readFileSync(base_name)
 }
 
-const create_shortener = (req, res) => {
+
+const ask_shortener = (req, res) => {
     const template = get_template('template.html')
     res.writeHead(200, {'Content-Type': 'text/html'})
     res.end(template)
-    console.log(req.method === 'POST')
+}
+
+
+const commit_shortener = (req, res, change_max) => {
+    console.log(req)
+    res.end()
+}
+
+
+const create_shortener = (req, res, change_max) => {
+    req.method === 'POST' ?
+	commit_shortener(req, res, change_max) :
+	ask_shortener (req, res)
 }
 
 
 const check_short_url = (check_stmt, url, cb) => {
-    console.log(1234, url)
     check_stmt.get(url, (err, obj) => cb(err, obj))
 }
 
@@ -95,8 +107,11 @@ const run_server = (db, max_id) => {
     })
 
     http.createServer((req, res) => {
+	const current_max = max_id
+	const change_max = (new_max) => {current_max = new_max}
         req.url === '/' ?
-            create_shortener(req, res) : redirect(check_stmt, req, res)
+            create_shortener(req, res, change_max) :
+	    redirect(check_stmt, req, res)
     }).listen(8080)
 
 }
