@@ -18,30 +18,25 @@ const create_base_db = (db) => {
         db.run('CREATE INDEX links_url ON links (url)',
                (err) => 0) //OK: can exist
 
-        db.run('INSERT INTO links VALUES(1, "a", "dat://3434e9e7e4d206d8dfbdfbb386deddb2fc667ef4f158d4dfefecf4ff9a4e771d/", NULL)',
+        db.run('INSERT INTO links VALUES(1, "/a", "dat://3434e9e7e4d206d8dfbdfbb386deddb2fc667ef4f158d4dfefecf4ff9a4e771d/", NULL)',
                (err) => 0) //OK: can exist
     })
-
 }
 
 
-var max_id // A lovely global variable :(
-
-const get_max_id = (db) => {
-    var max_id
-    db.serialize(() => {
-        db.each("SELECT MAX(id) AS max FROM links", (err, row) => {
-            max_id = row.max
-	})})
-    return max_id
+const get_max_id = (db, cb) => {
+    db.each("SELECT MAX(id) AS max FROM links", (err, row) => {
+	cb(db, row.max)
+    })
 }
 
 
-const prepare_database = (fname) => {
+const prepare_database = (fname, cb) => {
     const db = new sql.Database(fname)
-    create_base_db(db)
-    max_id = get_max_id(db)
-    return db
+    db.serialize(() => {
+	create_base_db(db)
+	get_max_id(db, cb)
+    })
 }
 
 
@@ -49,12 +44,13 @@ const create_shortener = (req, res) => {
     const template = fs.readFileSync('template.html')
     res.writeHead(200, {'Content-Type': 'text/html'})
     res.end(template)
-    console.log(req)
     console.log(req.method === 'POST')
 }
 
 
-const check_short_url = (url) => {
+const check_short_url = (check_stmt, url, cb) => {
+    console.log(1234, url)
+    check_stmt.get(url, (err, obj) => cb(err, obj))
     return true
 }
 
@@ -62,27 +58,41 @@ const check_short_url = (url) => {
 const is_beaker = (user_agent) => user_agent.indexOf("Beaker") > -1
 
 
-const redirect = (req, res) => {
-    const short_url = check_short_url(req.url)
-    if (!short_url) {
-	//XXX report error
-	return
+const redirect = (check_stmt, req, res) => {
+    if (req.url === '/favicon.ico') return
+
+    const process_url = (err, short_url) => {
+        if (!short_url) {
+	    console.log(1111111)
+	    //XXX report error
+        }
+	else {
+            const redirect_url = is_beaker(req.headers['user-agent']) ?
+                  short_url.dat : short_url.https
+            res.writeHead(302, {'Location': redirect_url})
+        }
+        res.end()
     }
-    const redirect_url = is_beaker(req.headers['user-agent']) ?
-	  short_url.dat : short_url.https
-    res.writeHead(302, {'Location': redirect_url})
+    
+    const short_url = check_short_url(check_stmt, req.url, process_url)
 }
 
 
-const db = prepare_database('my.db')
+const run_server = (db, max_id) => {
+    const check_stmt = db.prepare('SELECT * from links where url=?')
 
-process.on('SIGINT', (code) => {
-    db.close()
-    process.exit()
-})
+    process.on('SIGINT', (code) => {
+        check_stmt.finalize()
+        db.close()
+        process.exit()
+    })
 
-http.createServer((req, res) => {
-    req.url === '/' ?
-	create_shortener(req, res) : redirect(req, res)
-    res.end()
-}).listen(8080)
+    http.createServer((req, res) => {
+        req.url === '/' ?
+            create_shortener(req, res) : redirect(check_stmt, req, res)
+    }).listen(8080)
+
+}
+
+
+prepare_database('my.db', run_server)
