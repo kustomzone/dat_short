@@ -69,7 +69,7 @@ const redirect = (check_stmt, req, res) => {
 
     const process_url = (err, short_url) => {
         if (!short_url) {
-            const template = get_template('error.html')
+            const template = get_template('error-redirect.html')
             res.writeHead(200, {'Content-Type': 'text/html'})
             res.end(template)
         }
