@@ -175,7 +175,9 @@ const run_server = (db) => {
         req.url === '/' ?
             create_shortener(db, req, res) :
             redirect(req, res)
-    }).listen(8080)
+    }).listen({
+          port: 8080,
+          host: '0.0.0.0'})
 
 }
 
