@@ -2,6 +2,7 @@ const fs = require('fs')
 const http = require('http')
 
 const formd = require('formidable')
+const commander = require('commander')
 const sql = require('sqlite3')
 
 
