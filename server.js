@@ -169,6 +169,7 @@ const run_server = (db) => {
     process.on('SIGINT', (code) => {
         check_db_short.finalize()
         db.close()
+        console.log('Bye')
         process.exit()
     })
 
@@ -177,10 +178,16 @@ const run_server = (db) => {
             create_shortener(db, req, res) :
             redirect(req, res)
     }).listen({
-          port: 8080,
-          host: '0.0.0.0'})
+          port: commander.port,
+          host: commander.host})
 
 }
 
 
+commander
+  .option('-p, --port <n>', 'Port', parseInt, 8080)
+  .option('-h, --host <n>', 'Listening interface, e.g. 0.0.0.0', 'localhost')
+  .parse(process.argv)
+console.log("Port:", commander.port)
+console.log("Listening:", commander.host)
 prepare_database('my.db', run_server)
