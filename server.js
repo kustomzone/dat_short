@@ -19,7 +19,7 @@ const create_base_db = (db) => {
         db.run('CREATE INDEX links_url ON links (url)',
                (err) => 0) //OK: can exist
 
-        db.run('INSERT INTO links VALUES(1, "/a", "dat://3434e9e7e4d206d8dfbdfbb386deddb2fc667ef4f158d4dfefecf4ff9a4e771d/", NULL)',
+        db.run('INSERT INTO links VALUES(1, "/a", "dat://3434e9e7e4d206d8dfbdfbb386deddb2fc667ef4f158d4dfefecf4ff9a4e771d/", "https://shortener-tiago.hashbase.io/")',
                (err) => 0) //OK: can exist
     })
 }
@@ -44,11 +44,14 @@ const prepare_database = (fname, cb) => {
 }
 
 
-const get_template = (base_name, replace1='', replace2='') => {
+const get_template = (base_name,
+		      replace1='', replace2='', replace3='') => {
     const text = fs.existsSync('config-' + base_name) ?
           fs.readFileSync('config-' + base_name, 'utf8') :
           fs.readFileSync(base_name, 'utf8')
-    return text.replace('REPLACE1', replace1).replace('REPLACE2', replace2)
+    return text.replace(/REPLACE1/g, replace1)
+               .replace(/REPLACE2/g, replace2)
+               .replace(/REPLACE3/g, replace3)
 }
 
 
@@ -97,16 +100,13 @@ const create_new_url = (old_url) => {
 }
 
 
-const write_database = (db, res, fields) => {
+const write_database = (db, req, res, fields) => {
     get_max_id_url(db, (db, max_id, url) => {
-        res.write('Will write')
-        res.write(fields.dat)
-        res.write(fields.https)
-        res.write(max_id.toString())
-        res.write(url)
-        insert_db_url.run(max_id + 1, create_new_url(url),
-			  fields.dat, fields.https)
-        res.end()
+	const new_url = create_new_url(url)
+        insert_db_url.run(max_id + 1, new_url, fields.dat, fields.https)
+	const short_url = req.headers.host + new_url
+	res.end(get_template('done.html', short_url,
+			     fields.dat, fields.https))
     })
 }
 
@@ -115,7 +115,7 @@ const commit_shortener = (db, req, res) => {
     const form = new formd.IncomingForm()
     form.parse(req, (err, fields, files) => {
         has_form_errors(res, err, fields) ||
-            write_database (db, res, fields)
+            write_database (db, req, res, fields)
     })
 }
 
@@ -141,7 +141,7 @@ const redirect = (req, res) => {
 
     const process_url = (err, short_url) => {
         if (!short_url) {
-            const template = get_template('error-redirect.html')
+            const template = get_template('template.html')
             res.writeHead(200, {'Content-Type': 'text/html'})
             res.end(template)
         }
