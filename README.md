@@ -19,32 +19,40 @@ You can find this at http://s.tiago.org, but beware that this is
 just a proof of concept.
 
 Requirements
-=============
+============
 
 sqlite3
 
 Configuration
-==============
+=============
 
 - Template configuration
 
+  You can copy all HTML files to config-*.html (e.g. main.html to
+  config-main.html) in order to change the templates
+
 - Web server integration
 
-- Standalone (HTTPS...)
+  This was tested with nginx
+
+- Standalone
+
+  This works standalone but it is currently HTTP, not HTTPs.
 
 How to run
-===========
-
-
-`npm start`
-
-Interested
 ==========
+
+
+`node server.js` (or `npm start`). You will get some help with
+`node server.js --help`.
+
+Interested?
+===========
 
 [Contact me](mailto:tiago@tiago.org)
 
 License and copyright
-=======================
+=====================
 
 License: Affero GPL v3.
 
