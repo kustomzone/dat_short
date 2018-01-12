@@ -21,6 +21,8 @@ const create_base_db = (db) => {
 
         db.run('INSERT INTO links VALUES(1, "/a", "dat://3434e9e7e4d206d8dfbdfbb386deddb2fc667ef4f158d4dfefecf4ff9a4e771d/", "https://shortener-tiago.hashbase.io/")',
                (err) => 0) //OK: can exist
+        db.run('INSERT INTO links VALUES(2, "/b", "dat://3434e9e7e4d206d8dfbdfbb386deddb2fc667ef4f158d4dfefecf4ff9a4e771d/", null)',
+               (err) => 0) //OK: can exist
     })
 }
 
@@ -148,7 +150,10 @@ const redirect = (req, res) => {
         else {
             const redirect_url = is_beaker(req.headers['user-agent']) ?
                   short_url.dat : short_url.https
-            res.writeHead(302, {'Location': redirect_url})
+	    if (redirect_url) {
+		res.writeHead(302, {'Location': redirect_url})
+	    } else {
+	    }
         }
         res.end()
     }
