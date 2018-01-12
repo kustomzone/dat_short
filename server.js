@@ -48,7 +48,7 @@ const prepare_database = (fname, cb) => {
 
 
 const get_template = (base_name,
-		      replace1='', replace2='', replace3='') => {
+                      replace1='', replace2='', replace3='') => {
     const text = fs.existsSync('config-' + base_name) ?
           fs.readFileSync('config-' + base_name, 'utf8') :
           fs.readFileSync(base_name, 'utf8')
@@ -105,11 +105,11 @@ const create_new_url = (old_url) => {
 
 const write_database = (db, req, res, fields) => {
     get_max_id_url(db, (db, max_id, url) => {
-	const new_url = create_new_url(url)
+        const new_url = create_new_url(url)
         insert_db_url.run(max_id + 1, new_url, fields.dat, fields.https)
-	const short_url = req.headers.host + new_url
-	res.end(get_template('done.html', short_url,
-			     fields.dat, fields.https))
+        const short_url = req.headers.host + new_url
+        res.end(get_template('done.html', short_url,
+                             fields.dat, fields.https))
     })
 }
 
@@ -151,13 +151,13 @@ const redirect = (req, res) => {
         else {
             const redirect_url = is_beaker(req.headers['user-agent']) ?
                   short_url.dat : short_url.https
-	    if (redirect_url) {
-		res.writeHead(302, {'Location': redirect_url})
-	    } else {
-		const template = get_template('no-https.html', short_url.dat)
+            if (redirect_url) {
+                res.writeHead(302, {'Location': redirect_url})
+            } else {
+                const template = get_template('no-https.html', short_url.dat)
                 res.writeHead(200, {'Content-Type': 'text/html'})
                 res.end(template)
-	    }
+            }
         }
         res.end()
     }
