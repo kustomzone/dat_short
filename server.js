@@ -59,7 +59,7 @@ const get_template = (base_name,
 
 
 const ask_shortener = (req, res) => {
-    const template = get_template('template.html')
+    const template = get_template('main.html')
     res.end(template)
 }
 
@@ -144,7 +144,7 @@ const redirect = (req, res) => {
 
     const process_url = (err, short_url) => {
         if (!short_url) {
-            const template = get_template('template.html')
+            const template = get_template('main.html')
             res.writeHead(200, {'Content-Type': 'text/html'})
             res.end(template)
         }
