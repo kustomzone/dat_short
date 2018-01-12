@@ -55,7 +55,7 @@ const get_template = (base_name,
     return text.replace(/REPLACE1/g, replace1)
                .replace(/REPLACE2/g, replace2)
                .replace(/REPLACE3/g, replace3)
-}
+} // Silly silly silly
 
 
 const ask_shortener = (req, res) => {
@@ -154,6 +154,9 @@ const redirect = (req, res) => {
 	    if (redirect_url) {
 		res.writeHead(302, {'Location': redirect_url})
 	    } else {
+		const template = get_template('no-https.html', short_url.dat)
+                res.writeHead(200, {'Content-Type': 'text/html'})
+                res.end(template)
 	    }
         }
         res.end()
